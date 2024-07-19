@@ -1,0 +1,10 @@
+[package]
+name = "latcarf"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies.sdl2]
+version = "0.37.0"
+features = ["gfx"]
+[dependencies]
+itertools = "0.8.2"
