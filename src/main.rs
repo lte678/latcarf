@@ -1,10 +1,14 @@
+mod glium_sdl2;
+
 extern crate sdl2;
+extern crate glium;
 extern crate itertools;
 
 use sdl2::event::Event;
 use sdl2::pixels::Color;
 use sdl2::render::{Canvas, RenderTarget};
 use sdl2::gfx::primitives::DrawRenderer;
+
 use itertools::Itertools;
 
 use std::time::{Duration, Instant};
@@ -20,8 +24,10 @@ fn main() {
     
     let window = video_subsystem.window("latcarf", 1920, 1080)
         .position_centered()
+        .opengl()
         .build()
         .unwrap();
+    let gl_context = window.gl_create_context().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut canvas = window.into_canvas().build().unwrap();
     println!("Initialized window manager.");
