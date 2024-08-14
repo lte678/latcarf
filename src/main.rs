@@ -62,16 +62,15 @@ fn render<T: RenderTarget>(canvas: &mut Canvas<T>, offset: (FracFloat, FracFloat
     for (x, y) in (0..w).cartesian_product(0..h) {
         let c_real = (x as FracFloat - 0.5 * w as FracFloat) * scale + real_offset;
         let c_imag = (y as FracFloat - 0.5 * h as FracFloat) * scale + imag_offset;
-        match mandelbrot_depth(c_real, c_imag) {
-            Some(depth) => canvas.pixel(x as i16, y as i16, Color::RGB(255, 255, 255))?,
-            None => (),
+        if mandelbrot_depth(c_real, c_imag) < MAX_ITERATIONS {
+            canvas.pixel(x as i16, y as i16, Color::RGB(255, 255, 255))?;
         }
     }
     Ok(())
 }
 
 /// Calculates the depth of the mandelbrot fractal for given C real and imaginary part.
-fn mandelbrot_depth(c_real: FracFloat, c_imag: FracFloat) -> Option<u32> {
+fn mandelbrot_depth(c_real: FracFloat, c_imag: FracFloat) -> u32 {
     // z_n+1 = z_n^2 + c
     // Translated from complex into real operations (indices omitted):
     // "next iteration" = (z_real + z_imag*i)^2 + c_real + c_imag*i
@@ -82,16 +81,15 @@ fn mandelbrot_depth(c_real: FracFloat, c_imag: FracFloat) -> Option<u32> {
     let mut z_imag_sq: FracFloat = 0.0;
     let mut z_real: FracFloat = 0.0;
     let mut z_imag: FracFloat = 0.0;
-    for i in 0..MAX_ITERATIONS {
+    let mut i: u32 = 0;
+    while (z_real_sq + z_imag_sq) < 4.0 && i < MAX_ITERATIONS {
         z_imag = 2.0*z_real*z_imag + c_imag;
         z_real = z_real_sq - z_imag_sq + c_real;
         z_real_sq = z_real * z_real;
         z_imag_sq = z_imag * z_imag;
-        if (z_real_sq + z_imag_sq) > 2.0 {
-            return Some(i)
-        }
+        i += 1;
     }
-    None
+    i
 }
 
 
