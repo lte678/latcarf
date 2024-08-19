@@ -1,33 +1,84 @@
 mod glium_sdl2;
 
-extern crate sdl2;
-extern crate glium;
-extern crate itertools;
-
 use sdl2::event::Event;
 use sdl2::pixels::Color;
 use sdl2::render::{Canvas, RenderTarget};
 use sdl2::gfx::primitives::DrawRenderer;
-
+use clap::Parser;
 use itertools::Itertools;
 
 use std::time::{Duration, Instant};
 use std::collections::VecDeque;
 
+use crate::glium_sdl2::DisplayBuild;
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    device: Option<String>,
+}
+
 
 type FracFloat = f64;
 const MAX_ITERATIONS: u32 = 200;
 
+
 fn main() {
+    let cli = Args::parse();
+    if let Some(device) = cli.device {
+        if device == "cpu" {
+            cpu_mode();
+        } else if device == "gpu" {
+            gpu_mode();
+        } else {
+            println!("Invalid device '{}'", device);
+        }
+    } else {
+        cpu_mode();
+    }
+}
+
+
+fn gpu_mode() {
+    let sdl_context = sdl2::init().unwrap();
+    let video_subsystem = sdl_context.video().unwrap();
+    
+    let glium_backend = video_subsystem.window("latcarf", 1920, 1080)
+        .position_centered()
+        .build_glium()
+        .unwrap();
+    let mut event_pump = sdl_context.event_pump().unwrap();
+    println!("Initialized window manager.");
+     
+    let mut frametimes: VecDeque<u64> = VecDeque::new();
+    loop {
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit {..} => return,
+                _ => ()
+            }
+        }
+    
+        let render_start_t = Instant::now();
+        frametimes.push_back(render_start_t.elapsed().as_nanos() as u64);
+        if frametimes.len() > 10 {
+            let avg_frametime: u64 = (frametimes.iter().sum::<u64>() / frametimes.len() as u64) / 1000;
+            println!("Time per frame: {avg_frametime}us");
+            frametimes.pop_front();
+        }
+        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+    }
+}
+
+
+fn cpu_mode() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     
     let window = video_subsystem.window("latcarf", 1920, 1080)
         .position_centered()
-        .opengl()
         .build()
         .unwrap();
-    let gl_context = window.gl_create_context().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut canvas = window.into_canvas().build().unwrap();
     println!("Initialized window manager.");
@@ -48,7 +99,7 @@ fn main() {
         }
     
         let render_start_t = Instant::now();
-        render(&mut canvas, (0.0, 0.0)).unwrap();
+        render_cpu(&mut canvas, (0.0, 0.0)).unwrap();
         frametimes.push_back(render_start_t.elapsed().as_nanos() as u64);
         if frametimes.len() > 10 {
             let avg_frametime: u64 = (frametimes.iter().sum::<u64>() / frametimes.len() as u64) / 1000;
@@ -61,7 +112,7 @@ fn main() {
 }
 
 
-fn render<T: RenderTarget>(canvas: &mut Canvas<T>, offset: (FracFloat, FracFloat)) -> Result<(), String> {
+fn render_cpu<T: RenderTarget>(canvas: &mut Canvas<T>, offset: (FracFloat, FracFloat)) -> Result<(), String> {
     let (w, h) = canvas.output_size()?;
     let (real_offset, imag_offset) = offset;
     let scale: FracFloat = 4.0 / (w as FracFloat);
@@ -74,6 +125,7 @@ fn render<T: RenderTarget>(canvas: &mut Canvas<T>, offset: (FracFloat, FracFloat
     }
     Ok(())
 }
+
 
 /// Calculates the depth of the mandelbrot fractal for given C real and imaginary part.
 fn mandelbrot_depth(c_real: FracFloat, c_imag: FracFloat) -> u32 {
