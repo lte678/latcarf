@@ -4,13 +4,18 @@ use sdl2::event::Event;
 use sdl2::pixels::Color;
 use sdl2::render::{Canvas, RenderTarget};
 use sdl2::gfx::primitives::DrawRenderer;
+use glium::VertexBuffer;
+use glium::Surface;
 use clap::Parser;
 use itertools::Itertools;
-
 use std::time::{Duration, Instant};
 use std::collections::VecDeque;
 
 use crate::glium_sdl2::DisplayBuild;
+
+#[macro_use]
+extern crate glium;
+
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -18,10 +23,31 @@ struct Args {
     device: Option<String>,
 }
 
+#[derive(Copy, Clone)]
+struct Vertex {
+    position: [f32; 2],
+}
+implement_vertex!(Vertex, position);
+
 
 type FracFloat = f64;
 const MAX_ITERATIONS: u32 = 200;
+const VERTEX_SHADER: &str = r#"
+    #version 140
+    in vec2 position;
 
+    void main() {
+        gl_Position = vec4(position, 0.0, 1.0);
+    }
+"#;
+const FRAGMENT_SHADER: &str = r#"
+    #version 140
+    out vec4 color;
+
+    void main() {
+        color = vec4(1.0, 0.0, 0.0, 1.0);
+    }
+"#;
 
 fn main() {
     let cli = Args::parse();
@@ -43,13 +69,26 @@ fn gpu_mode() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     
-    let glium_backend = video_subsystem.window("latcarf", 1920, 1080)
+    let gl = video_subsystem.window("latcarf", 1920, 1080)
         .position_centered()
         .build_glium()
         .unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
-    println!("Initialized window manager.");
+    println!("Initialized GPU context.");
      
+    let demo_rectangle = vec![
+        Vertex{ position: [-1.0, -1.0] },
+        Vertex{ position: [ 1.0, -1.0] },
+        Vertex{ position: [-1.0,  1.0] },
+        Vertex{ position: [ 1.0, -1.0] },
+        Vertex{ position: [ 1.0,  1.0] },
+        Vertex{ position: [-1.0,  1.0] },
+    ];
+    let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
+    let shader = glium::Program::from_source(&gl, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+
+    let vbo = VertexBuffer::new(&gl, &demo_rectangle).unwrap();
+
     let mut frametimes: VecDeque<u64> = VecDeque::new();
     loop {
         for event in event_pump.poll_iter() {
@@ -60,6 +99,12 @@ fn gpu_mode() {
         }
     
         let render_start_t = Instant::now();
+        // RENDER START
+        let mut render_tgt = gl.draw();
+        render_tgt.clear_color(0.0, 0.0, 0.0, 1.0);
+        render_tgt.draw(&vbo, &indices, &shader, &glium::uniforms::EmptyUniforms, &Default::default()).unwrap();
+        render_tgt.finish().unwrap();
+        // RENDER END
         frametimes.push_back(render_start_t.elapsed().as_nanos() as u64);
         if frametimes.len() > 10 {
             let avg_frametime: u64 = (frametimes.iter().sum::<u64>() / frametimes.len() as u64) / 1000;
