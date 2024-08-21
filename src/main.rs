@@ -44,8 +44,27 @@ const FRAGMENT_SHADER: &str = r#"
     #version 140
     out vec4 color;
 
+    uniform vec2 offset;
+    uniform float scale;
+
     void main() {
-        color = vec4(1.0, 0.0, 0.0, 1.0);
+        float z_real_sq = 0.0;
+        float z_imag_sq = 0.0;
+        float z_real = 0.0;
+        float z_imag = 0.0;
+        uint i = 0u;
+        while (i < 200u) {
+            z_imag = 2.0*z_real*z_imag + (gl_FragCoord.y + offset.y)*scale;
+            z_real = z_real_sq - z_imag_sq + (gl_FragCoord.x + offset.x)*scale;
+            z_real_sq = z_real * z_real;
+            z_imag_sq = z_imag * z_imag;
+            i += 1u;
+        }
+        if((z_real_sq + z_imag_sq) < 4.0) {
+            color = vec4(0.0, 0.0, 0.0, 1.0);
+        } else {
+            color = vec4(1.0, 1.0, 1.0, 1.0);
+        }
     }
 "#;
 
@@ -68,11 +87,12 @@ fn main() {
 fn gpu_mode() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
-    
+
     let gl = video_subsystem.window("latcarf", 1920, 1080)
         .position_centered()
         .build_glium()
         .unwrap();
+    // video_subsystem.gl_set_swap_interval(SwapInterval::Immediate).unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
     println!("Initialized GPU context.");
      
@@ -85,15 +105,22 @@ fn gpu_mode() {
         Vertex{ position: [-1.0,  1.0] },
     ];
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
-    let shader = glium::Program::from_source(&gl, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
-
+    let shader = match glium::Program::from_source(&gl, VERTEX_SHADER, FRAGMENT_SHADER, None) {
+        Ok(s) => s,
+        Err(shader_err) => panic!("Failed to compile shader:\n{shader_err}"),
+    };
     let vbo = VertexBuffer::new(&gl, &demo_rectangle).unwrap();
+    let (w, h) = gl.get_framebuffer_dimensions();
+    let mut scale = 2.0 / u32::min(w, h) as f32;
+    let mut offset = (-(w as f32)/2.0, -(h as f32)/2.0);
 
     let mut frametimes: VecDeque<u64> = VecDeque::new();
     loop {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} => return,
+                Event::MouseWheel {precise_y, ..} => scale *= (-0.1 * precise_y).exp(),
+                Event::MouseMotion {mousestate, xrel, yrel, ..} if mousestate.left() => {offset.0 -= xrel as f32; offset.1 += yrel as f32},
                 _ => ()
             }
         }
@@ -102,7 +129,13 @@ fn gpu_mode() {
         // RENDER START
         let mut render_tgt = gl.draw();
         render_tgt.clear_color(0.0, 0.0, 0.0, 1.0);
-        render_tgt.draw(&vbo, &indices, &shader, &glium::uniforms::EmptyUniforms, &Default::default()).unwrap();
+        render_tgt.draw(
+            &vbo,
+            &indices,
+            &shader,
+            &uniform!{offset: offset, scale: scale},
+            &Default::default()
+        ).unwrap();
         render_tgt.finish().unwrap();
         // RENDER END
         frametimes.push_back(render_start_t.elapsed().as_nanos() as u64);
