@@ -10,6 +10,7 @@ use clap::Parser;
 use itertools::Itertools;
 use std::time::{Duration, Instant};
 use std::collections::VecDeque;
+use std::process;
 
 use crate::glium_sdl2::DisplayBuild;
 
@@ -32,41 +33,7 @@ implement_vertex!(Vertex, position);
 
 type FracFloat = f64;
 const MAX_ITERATIONS: u32 = 200;
-const VERTEX_SHADER: &str = r#"
-    #version 140
-    in vec2 position;
 
-    void main() {
-        gl_Position = vec4(position, 0.0, 1.0);
-    }
-"#;
-const FRAGMENT_SHADER: &str = r#"
-    #version 140
-    out vec4 color;
-
-    uniform vec2 offset;
-    uniform float scale;
-
-    void main() {
-        float z_real_sq = 0.0;
-        float z_imag_sq = 0.0;
-        float z_real = 0.0;
-        float z_imag = 0.0;
-        uint i = 0u;
-        while (i < 200u) {
-            z_imag = 2.0*z_real*z_imag + (gl_FragCoord.y + offset.y)*scale;
-            z_real = z_real_sq - z_imag_sq + (gl_FragCoord.x + offset.x)*scale;
-            z_real_sq = z_real * z_real;
-            z_imag_sq = z_imag * z_imag;
-            i += 1u;
-        }
-        if((z_real_sq + z_imag_sq) < 4.0) {
-            color = vec4(0.0, 0.0, 0.0, 1.0);
-        } else {
-            color = vec4(1.0, 1.0, 1.0, 1.0);
-        }
-    }
-"#;
 
 fn main() {
     let cli = Args::parse();
@@ -80,6 +47,26 @@ fn main() {
         }
     } else {
         cpu_mode();
+    }
+}
+
+
+fn print_glsl_error(err: glium::ProgramCreationError, frag_shader: &str, vert_shader: &str) {
+    println!("Failed to compile shader:");
+    if let glium::CompilationError(compile_err, shader_type) = err {
+        let line_number: usize = (&compile_err)
+            .split(":").nth(1).unwrap()
+            .split("(").nth(0).unwrap()
+            .parse().unwrap();
+        print!("{}", &compile_err);
+        println!("In line {line_number}:");
+        match shader_type {
+            glium::program::ShaderType::Fragment => println!("{}", frag_shader.split("\n").nth(line_number-1).unwrap()),
+            glium::program::ShaderType::Vertex => println!("{}", vert_shader.split("\n").nth(line_number-1).unwrap()),
+            _ => (),
+        }
+    } else {
+        println!("{}", err);
     }
 }
 
@@ -104,10 +91,17 @@ fn gpu_mode() {
         Vertex{ position: [ 1.0,  1.0] },
         Vertex{ position: [-1.0,  1.0] },
     ];
+
+    let vert_shader = String::from_utf8_lossy(include_bytes!("../res/mandelbrot.vert"));
+    let frag_shader_preamble = "#version 330";
+    let frag_shader_colormap = String::from_utf8_lossy(include_bytes!("../res/IDL_CB-Pastel1.frag"));
+    let frag_shader_main = String::from_utf8_lossy(include_bytes!("../res/mandelbrot.frag"));
+    let frag_shader = [frag_shader_preamble, &frag_shader_colormap, &frag_shader_main].join("\n");
+
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
-    let shader = match glium::Program::from_source(&gl, VERTEX_SHADER, FRAGMENT_SHADER, None) {
+    let shader = match glium::Program::from_source(&gl, &vert_shader, &frag_shader, None) {
         Ok(s) => s,
-        Err(shader_err) => panic!("Failed to compile shader:\n{shader_err}"),
+        Err(shader_err) => { print_glsl_error(shader_err, &frag_shader, &vert_shader); process::exit(1) }
     };
     let vbo = VertexBuffer::new(&gl, &demo_rectangle).unwrap();
     let (w, h) = gl.get_framebuffer_dimensions();
