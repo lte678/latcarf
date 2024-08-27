@@ -191,8 +191,10 @@ fn render_cpu<T: RenderTarget>(canvas: &mut Canvas<T>, offset: (FracFloat, FracF
     for (x, y) in (0..w).cartesian_product(0..h) {
         let c_real = (x as FracFloat - 0.5 * w as FracFloat) * scale + real_offset;
         let c_imag = (y as FracFloat - 0.5 * h as FracFloat) * scale + imag_offset;
-        if mandelbrot_depth(c_real, c_imag) < MAX_ITERATIONS {
-            canvas.pixel(x as i16, y as i16, Color::RGB(255, 255, 255))?;
+        if let Some((_, dist)) = mandelbrot_depth(c_real, c_imag) {
+            if dist > scale*0.25 {
+                canvas.pixel(x as i16, y as i16, Color::RGB(255, 255, 255))?;
+            }
         }
     }
     Ok(())
@@ -200,7 +202,8 @@ fn render_cpu<T: RenderTarget>(canvas: &mut Canvas<T>, offset: (FracFloat, FracF
 
 
 /// Calculates the depth of the mandelbrot fractal for given C real and imaginary part.
-fn mandelbrot_depth(c_real: FracFloat, c_imag: FracFloat) -> u32 {
+/// Returns tuple of depth and distance to set if outside of the set.
+fn mandelbrot_depth(c_real: FracFloat, c_imag: FracFloat) -> Option<(u32, FracFloat)> {
     // z_n+1 = z_n^2 + c
     // Translated from complex into real operations (indices omitted):
     // "next iteration" = (z_real + z_imag*i)^2 + c_real + c_imag*i
@@ -211,15 +214,27 @@ fn mandelbrot_depth(c_real: FracFloat, c_imag: FracFloat) -> u32 {
     let mut z_imag_sq: FracFloat = 0.0;
     let mut z_real: FracFloat = 0.0;
     let mut z_imag: FracFloat = 0.0;
+    let mut z_prime_real: FracFloat = 1.0;
+    let mut z_prime_imag: FracFloat = 0.0;
     let mut i: u32 = 0;
-    while (z_real_sq + z_imag_sq) < 4.0 && i < MAX_ITERATIONS {
+    while (z_real_sq + z_imag_sq) < 4.0 {
+        let z_prime_rtmp = z_prime_real;
+        z_prime_real = 2.0*(z_real*z_prime_real - z_imag*z_prime_imag) + 1.0;
+        z_prime_imag = 2.0*(z_real*z_prime_imag + z_imag*z_prime_rtmp);
         z_imag = 2.0*z_real*z_imag + c_imag;
         z_real = z_real_sq - z_imag_sq + c_real;
         z_real_sq = z_real * z_real;
         z_imag_sq = z_imag * z_imag;
+
         i += 1;
+        if i >= MAX_ITERATIONS {
+            return None
+        }
     }
-    i
+    let z_mag = (z_real_sq + z_imag_sq).sqrt();
+    let z_prime_mag = (z_prime_real*z_prime_real + z_prime_imag*z_prime_imag).sqrt();
+    let dist = z_mag*z_mag.ln()/z_prime_mag;
+    Some((i, dist))
 }
 
 
