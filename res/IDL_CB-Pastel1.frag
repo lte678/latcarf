@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+// Thank you kbinani for the colormaps!
+
 float colormap_red(float x) {
 	if (x < 0.122867923365625) {
 		return -5.81788489736069E+02 * x + 2.50471590909091E+02;

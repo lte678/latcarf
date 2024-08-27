@@ -94,7 +94,7 @@ fn gpu_mode() {
 
     let vert_shader = String::from_utf8_lossy(include_bytes!("../res/mandelbrot.vert"));
     let frag_shader_preamble = "#version 330";
-    let frag_shader_colormap = String::from_utf8_lossy(include_bytes!("../res/IDL_CB-Pastel1.frag"));
+    let frag_shader_colormap = String::from_utf8_lossy(include_bytes!("../res/IDL_Waves.frag"));
     let frag_shader_main = String::from_utf8_lossy(include_bytes!("../res/mandelbrot.frag"));
     let frag_shader = [frag_shader_preamble, &frag_shader_colormap, &frag_shader_main].join("\n");
 
