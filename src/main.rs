@@ -106,15 +106,16 @@ fn gpu_mode() {
     let vbo = VertexBuffer::new(&gl, &demo_rectangle).unwrap();
     let (w, h) = gl.get_framebuffer_dimensions();
     let mut scale = 2.0 / u32::min(w, h) as f32;
-    let mut offset = (-(w as f32)/2.0, -(h as f32)/2.0);
+    let mut offset = (0.0, 0.0);
 
     let mut frametimes: VecDeque<u64> = VecDeque::new();
     loop {
+        let (w, h) = gl.get_framebuffer_dimensions();
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} => return,
                 Event::MouseWheel {precise_y, ..} => scale *= (-0.1 * precise_y).exp(),
-                Event::MouseMotion {mousestate, xrel, yrel, ..} if mousestate.left() => {offset.0 -= xrel as f32; offset.1 += yrel as f32},
+                Event::MouseMotion {mousestate, xrel, yrel, ..} if mousestate.left() => {offset.0 -= (xrel as f32)*scale; offset.1 += (yrel as f32)*scale},
                 _ => ()
             }
         }
@@ -127,7 +128,7 @@ fn gpu_mode() {
             &vbo,
             &indices,
             &shader,
-            &uniform!{offset: offset, scale: scale},
+            &uniform!{offset: offset, scale: scale, window_size: (w as f32, h as f32)},
             &Default::default()
         ).unwrap();
         render_tgt.finish().unwrap();

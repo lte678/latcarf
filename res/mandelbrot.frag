@@ -1,6 +1,7 @@
 out vec4 color;
 
 uniform vec2 offset;
+uniform vec2 window_size;
 uniform float scale;
 
 void main() {
@@ -17,8 +18,8 @@ void main() {
         z_prime_rtmp = z_prime_real;
         z_prime_real = 2.0*(z_real*z_prime_real - z_imag*z_prime_imag) + 1.0;
         z_prime_imag = 2.0*(z_real*z_prime_imag + z_imag*z_prime_rtmp);
-        z_imag = 2.0*z_real*z_imag + (gl_FragCoord.y + offset.y)*scale;
-        z_real = z_real_sq - z_imag_sq + (gl_FragCoord.x + offset.x)*scale;
+        z_imag = 2.0*z_real*z_imag + (gl_FragCoord.y - window_size.y*0.5)*scale + offset.y;
+        z_real = z_real_sq - z_imag_sq + (gl_FragCoord.x - window_size.x*0.5)*scale + offset.x;
         z_real_sq = z_real * z_real;
         z_imag_sq = z_imag * z_imag;
         i += 1u;
