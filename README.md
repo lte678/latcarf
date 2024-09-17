@@ -1,5 +1,6 @@
 ![latcarf](https://github.com/user-attachments/assets/70e21e57-bf87-438e-b972-713368136556)
 ---
+[![Build](https://github.com/lte678/latcarf/actions/workflows/rust.yml/badge.svg)](https://github.com/lte678/latcarf/actions/workflows/rust.yml)  
 Latcarf is a ridiculously named fractal renderer.
 It is a toy project to work with and develop skills with shaders, OpenGL, Rust, glium.rs and discover mathematical methods for _accurate_ and _aesthetic_ fractal depiction.
 
