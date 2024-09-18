@@ -4,7 +4,7 @@
 Latcarf is a ridiculously named fractal renderer.
 It is a toy project to work with and develop skills with shaders, OpenGL, Rust, glium.rs and discover mathematical methods for _accurate_ and _aesthetic_ fractal depiction.
 
-On a well-equipped machine (RTX A2000, i7-13700K @ 1080p), gpu-backed rendering achieves just under 60 fps.
+On a well-equipped machine (GTX 1070, 3600X @ 1080p), gpu-backed rendering achieves around 5000 fps.
 
 ## How to Run
 `cargo run -- gpu` or `cargo run -- cpu`
