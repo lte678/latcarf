@@ -1,5 +1,9 @@
-mod glium_sdl2;
+#![feature(array_chunks)]
 
+mod glium_sdl2;
+mod text_rendering;
+
+use image::{ImageBuffer, Rgb};
 use sdl2::event::Event;
 use sdl2::pixels::Color;
 use sdl2::render::{Canvas, RenderTarget};
@@ -11,8 +15,10 @@ use itertools::Itertools;
 use std::time::{Duration, Instant};
 use std::collections::VecDeque;
 use std::process;
+use env_logger;
 
 use crate::glium_sdl2::DisplayBuild;
+use crate::text_rendering::{load_default_fonts, generate_atlas};
 
 #[macro_use]
 extern crate glium;
@@ -36,6 +42,7 @@ const MAX_ITERATIONS: u32 = 200;
 
 
 fn main() {
+    env_logger::init();
     let cli = Args::parse();
     if let Some(device) = cli.device {
         if device == "cpu" {
@@ -46,7 +53,7 @@ fn main() {
             println!("Invalid device '{}'", device);
         }
     } else {
-        cpu_mode();
+        gpu_mode();
     }
 }
 
@@ -82,7 +89,16 @@ fn gpu_mode() {
     // video_subsystem.gl_set_swap_interval(SwapInterval::Immediate).unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
     println!("Initialized GPU context.");
-     
+
+    let font = load_default_fonts(); 
+    let font_atlas: font_kit::canvas::Canvas = generate_atlas(&font, 32.0);
+    let font_atlas_img = ImageBuffer::<Rgb<u8>, Vec<u8>>::from_raw(
+        font_atlas.size.x() as u32, font_atlas.size.y() as u32, font_atlas.pixels
+    ).unwrap();
+    font_atlas_img.save("font_atlas.png").unwrap();
+
+
+
     let demo_rectangle = vec![
         Vertex{ position: [-1.0, -1.0] },
         Vertex{ position: [ 1.0, -1.0] },
