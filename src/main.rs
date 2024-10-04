@@ -1,5 +1,3 @@
-#![feature(array_chunks)]
-
 mod glium_sdl2;
 mod text_rendering;
 
