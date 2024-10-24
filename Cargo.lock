@@ -716,8 +716,6 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 [[package]]
 name = "font-kit"
 version = "0.14.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b64b34f4efd515f905952d91bc185039863705592c0c53ae6d979805dd154520"
 dependencies = [
  "bitflags 2.6.0",
  "byteorder",
@@ -1084,6 +1082,7 @@ dependencies = [
  "clap",
  "env_logger",
  "font-kit",
+ "freetype-sys",
  "glium",
  "image",
  "itertools 0.8.2",

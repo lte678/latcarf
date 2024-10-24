@@ -89,7 +89,7 @@ fn gpu_mode() {
     println!("Initialized GPU context.");
 
     let font = load_default_fonts(); 
-    let font_atlas: font_kit::canvas::Canvas = generate_atlas(&font, 32.0);
+    let font_atlas: font_kit::canvas::Canvas = generate_atlas(&font, 32.0, None);
     let font_atlas_img = ImageBuffer::<Rgb<u8>, Vec<u8>>::from_raw(
         font_atlas.size.x() as u32, font_atlas.size.y() as u32, font_atlas.pixels
     ).unwrap();
