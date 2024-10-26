@@ -26,6 +26,8 @@ extern crate glium;
 #[command(version, about, long_about = None)]
 struct Args {
     device: Option<String>,
+    #[arg(short, long)]
+    debug: bool,
 }
 
 #[derive(Copy, Clone)]
@@ -42,6 +44,15 @@ const MAX_ITERATIONS: u32 = 200;
 fn main() {
     env_logger::init();
     let cli = Args::parse();
+
+    // Prepare logging
+    let mut log_builder = env_logger::builder();
+    if cli.debug {
+        log_builder.filter_level(log::LevelFilter::Debug);
+    }
+    log_builder.init();
+
+    // Pick device to run on
     if let Some(device) = cli.device {
         if device == "cpu" {
             cpu_mode();
